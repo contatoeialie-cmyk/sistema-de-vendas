@@ -47,6 +47,8 @@ export interface IngredienteNecessario {
   insumoId: string
   nome: string
   quantidade: number
+  pesoUnitario: number
+  pesoTotal: number
 }
 
 export interface CartResumo {
@@ -111,15 +113,24 @@ export function calcularCarrinho(
   // Ingredientes agregados
   const mapa = new Map<string, IngredienteNecessario>()
   for (const l of linhas) {
-    const rend = l.receita.rendimento > 0 ? l.receita.rendimento : 1
-    const fator = l.quantidade / rend
     for (const ing of l.receita.ingredientes) {
       const insumo = insumos.find((i) => i.id === ing.insumoId)
       const nome = insumo ? insumo.nome : 'Insumo removido'
-      const qtd = ing.quantidade * fator
+      const pesoUnitario = insumo?.pesoUnitario ?? 0
+      const qtd = ing.quantidade * l.quantidade
       const existente = mapa.get(ing.insumoId)
-      if (existente) existente.quantidade += qtd
-      else mapa.set(ing.insumoId, { insumoId: ing.insumoId, nome, quantidade: qtd })
+      if (existente) {
+        existente.quantidade += qtd
+        existente.pesoTotal += qtd * existente.pesoUnitario
+      } else {
+        mapa.set(ing.insumoId, {
+          insumoId: ing.insumoId,
+          nome,
+          quantidade: qtd,
+          pesoUnitario,
+          pesoTotal: qtd * pesoUnitario,
+        })
+      }
     }
   }
 

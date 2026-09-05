@@ -18,7 +18,7 @@ export async function GET() {
   return NextResponse.json({
     categorias: categoryRows.map((row) => ({ id: row.id, nome: row.name })),
     insumos: supplyRows.map((row) => ({ id: row.id, nome: row.name, valorUnitario: Number(row.unitPrice), pesoUnitario: row.unitWeight ? Number(row.unitWeight) : 0, ondeCompra: row.whereToBuy })),
-    receitas: recipeRows.map((row) => ({ id: row.id, nome: row.name, categoriaId: row.categoryId, precoAtual: Number(row.salePrice), rendimento: row.yieldQuantity, pesoUnitario: row.unitWeight ? Number(row.unitWeight) : 0, faixaServidorMin: row.serverMin ? Number(row.serverMin) : 0, faixaServidorMax: row.serverMax ? Number(row.serverMax) : 0, ingredientes: ingredientRows.filter((item) => item.recipeId === row.id).map((item) => ({ insumoId: item.supplyId, quantidade: item.quantity })) })),
+    receitas: recipeRows.map((row) => ({ id: row.id, nome: row.name, categoriaId: row.categoryId, precoAtual: Number(row.salePrice), rendimento: row.yieldQuantity, pesoUnitario: row.unitWeight ? Number(row.unitWeight) : 0, precoMinServidor: row.serverMin === null ? 0 : Number(row.serverMin), precoMaxServidor: row.serverMax === null ? 0 : Number(row.serverMax), ingredientes: ingredientRows.filter((item) => item.recipeId === row.id).map((item) => ({ insumoId: item.supplyId, quantidade: item.quantity })) })),
   })
 }
 
