@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Pencil, Plus, Tag, Trash2, X } from 'lucide-react'
+  import { Check, Pencil, Plus, Tag, Trash2, X } from 'lucide-react'
 import { Card, Field, Input, Modal, SectionTitle, Select } from '@/components/ui/kit'
 import { useStore } from '@/lib/store'
 import { extratoReceita, formatMoney, formatQty } from '@/lib/calc'
@@ -35,6 +35,7 @@ export function ReceitasTab() {
     categorias,
     insumos,
     addCategoria,
+    updateCategoria,
     removeCategoria,
     addReceita,
     updateReceita,
@@ -45,6 +46,25 @@ export function ReceitasTab() {
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState<FormState>(vazio)
   const [novaCategoria, setNovaCategoria] = useState('')
+  const [editCatId, setEditCatId] = useState<string | null>(null)
+  const [editCatNome, setEditCatNome] = useState('')
+
+  const iniciarEdicaoCategoria = (id: string, nome: string) => {
+    setEditCatId(id)
+    setEditCatNome(nome)
+  }
+  const salvarEdicaoCategoria = () => {
+    if (editCatId && editCatNome.trim()) updateCategoria(editCatId, editCatNome)
+    setEditCatId(null)
+    setEditCatNome('')
+  }
+  const removerCategoria = (id: string, nome: string) => {
+    const usada = receitas.some((r) => r.categoriaId === id)
+    const msg = usada
+      ? `A categoria "${nome}" possui receitas vinculadas. Remover mesmo assim?`
+      : `Remover a categoria "${nome}"?`
+    if (window.confirm(msg)) removeCategoria(id)
+  }
 
   const abrirNovo = () => {
     setEditId(null)
@@ -129,23 +149,63 @@ export function ReceitasTab() {
             <p className="text-sm text-muted-foreground">Nenhuma categoria criada ainda.</p>
           )}
           {categorias.map((c) => {
-            const usada = receitas.some((r) => r.categoriaId === c.id)
+            if (editCatId === c.id) {
+              return (
+                <span
+                  key={c.id}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-pink/50 bg-pink/10 px-2 py-1 text-sm"
+                >
+                  <Input
+                    value={editCatNome}
+                    onChange={(e) => setEditCatNome(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.nativeEvent.isComposing) salvarEdicaoCategoria()
+                      if (e.key === 'Escape') setEditCatId(null)
+                    }}
+                    autoFocus
+                    className="h-7 w-40 px-2 py-1 text-sm"
+                  />
+                  <button
+                    type="button"
+                    aria-label="Salvar categoria"
+                    onClick={salvarEdicaoCategoria}
+                    className="text-success transition hover:brightness-110"
+                  >
+                    <Check className="size-4" />
+                  </button>
+                  <button
+                    type="button"
+                    aria-label="Cancelar edição"
+                    onClick={() => setEditCatId(null)}
+                    className="text-muted-foreground transition hover:text-foreground"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </span>
+              )
+            }
             return (
               <span
                 key={c.id}
                 className="inline-flex items-center gap-1.5 rounded-full border border-blue/40 bg-blue/10 px-3 py-1 text-sm text-foreground"
               >
                 {c.nome}
-                {!usada && (
-                  <button
-                    type="button"
-                    aria-label={`Remover categoria ${c.nome}`}
-                    onClick={() => removeCategoria(c.id)}
-                    className="text-muted-foreground transition hover:text-destructive"
-                  >
-                    <X className="size-3.5" />
-                  </button>
-                )}
+                <button
+                  type="button"
+                  aria-label={`Editar categoria ${c.nome}`}
+                  onClick={() => iniciarEdicaoCategoria(c.id, c.nome)}
+                  className="text-muted-foreground transition hover:text-pink"
+                >
+                  <Pencil className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  aria-label={`Remover categoria ${c.nome}`}
+                  onClick={() => removerCategoria(c.id, c.nome)}
+                  className="text-muted-foreground transition hover:text-destructive"
+                >
+                  <X className="size-3.5" />
+                </button>
               </span>
             )
           })}
@@ -441,10 +501,15 @@ export function ReceitasTab() {
                     <Input
                       type="number"
                       min={0}
-                      step="0.01"
+                      step="1"
                       value={ing.quantidade || ''}
+                      onKeyDown={(e) => {
+                        if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) e.preventDefault()
+                      }}
                       onChange={(e) =>
-                        updateIngrediente(idx, { quantidade: Number(e.target.value) })
+                        updateIngrediente(idx, {
+                          quantidade: Math.max(0, Math.floor(Number(e.target.value) || 0)),
+                        })
                       }
                       className="h-9 w-24"
                       placeholder="Qtd"

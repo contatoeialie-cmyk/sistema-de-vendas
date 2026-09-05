@@ -2,6 +2,7 @@ export interface Insumo {
   id: string
   nome: string
   valorUnitario: number
+  pesoUnitario: number
   ondeCompra: string
 }
 

@@ -7,7 +7,7 @@ import { useStore } from '@/lib/store'
 import { formatMoney } from '@/lib/calc'
 import type { Insumo } from '@/lib/types'
 
-const vazio = { nome: '', valorUnitario: 0, ondeCompra: '' }
+const vazio = { nome: '', valorUnitario: 0, pesoUnitario: 0, ondeCompra: '' }
 
 export function InsumosTab() {
   const { insumos, addInsumo, updateInsumo, removeInsumo, receitas } = useStore()
@@ -22,7 +22,12 @@ export function InsumosTab() {
   }
   const abrirEdicao = (i: Insumo) => {
     setEditId(i.id)
-    setForm({ nome: i.nome, valorUnitario: i.valorUnitario, ondeCompra: i.ondeCompra })
+    setForm({
+      nome: i.nome,
+      valorUnitario: i.valorUnitario,
+      pesoUnitario: i.pesoUnitario ?? 0,
+      ondeCompra: i.ondeCompra,
+    })
     setOpen(true)
   }
 
@@ -72,6 +77,11 @@ export function InsumosTab() {
                   {formatMoney(i.valorUnitario)}
                   <span className="ml-1 text-xs font-normal text-muted-foreground">/ un.</span>
                 </p>
+                {i.pesoUnitario ? (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Peso unitário: <span className="text-foreground">{i.pesoUnitario}</span>
+                  </p>
+                ) : null}
                 {i.ondeCompra ? (
                   <p className="mt-1 flex items-center gap-1 text-xs text-blue">
                     <MapPin className="size-3.5" />
@@ -138,6 +148,19 @@ export function InsumosTab() {
                 setForm((f) => ({ ...f, valorUnitario: Number(e.target.value) }))
               }
               placeholder="0.00"
+            />
+          </Field>
+          <Field label="Peso unitário" htmlFor="insumo-peso">
+            <Input
+              id="insumo-peso"
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.pesoUnitario || ''}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, pesoUnitario: Math.max(0, Number(e.target.value)) }))
+              }
+              placeholder="0"
             />
           </Field>
           <Field label="Onde comprar" htmlFor="insumo-onde" hint="Loja, mercado ou fornecedor">

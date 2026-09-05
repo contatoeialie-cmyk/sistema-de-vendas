@@ -21,6 +21,7 @@ export function VendaTab({
   const [categoriaAtiva, setCategoriaAtiva] = useState<string>('todas')
   const [descontoTipo, setDescontoTipo] = useState<DescontoTipo>('valor')
   const [descontoValor, setDescontoValor] = useState<number>(0)
+  const [comissaoPct, setComissaoPct] = useState<number>(0)
   const [gerando, setGerando] = useState(false)
 
   const categoriasComProdutos = useMemo(
@@ -34,7 +35,14 @@ export function VendaTab({
   }, [receitas, categoriaAtiva])
 
   const setQtd = (id: string, v: number) =>
-    setQuantidades((prev) => ({ ...prev, [id]: Math.max(0, v) }))
+    setQuantidades((prev) => ({ ...prev, [id]: Math.max(0, Math.trunc(v)) }))
+
+  const setCartQtd = (receitaId: string, v: number) => {
+    const q = Math.max(1, Math.trunc(v))
+    setCart((prev) =>
+      prev.map((c) => (c.receitaId === receitaId ? { ...c, quantidade: q } : c)),
+    )
+  }
 
   const adicionar = (receitaId: string, qtd: number) => {
     if (qtd <= 0) return
@@ -62,8 +70,8 @@ export function VendaTab({
   }
 
   const resumo = useMemo(
-    () => calcularCarrinho(cart, receitas, insumos, descontoTipo, descontoValor),
-    [cart, receitas, insumos, descontoTipo, descontoValor],
+    () => calcularCarrinho(cart, receitas, insumos, descontoTipo, descontoValor, comissaoPct),
+    [cart, receitas, insumos, descontoTipo, descontoValor, comissaoPct],
   )
 
   const handlePDF = async () => {
@@ -136,31 +144,10 @@ export function VendaTab({
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className="flex items-center overflow-hidden rounded-lg border border-input">
-                          <button
-                            type="button"
-                            aria-label="Diminuir"
-                            onClick={() => setQtd(r.id, qtd - 1)}
-                            className="grid size-9 place-items-center text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                          >
-                            <Minus className="size-4" />
-                          </button>
-                          <input
-                            type="number"
-                            min={0}
-                            value={qtd}
-                            onChange={(e) => setQtd(r.id, Number(e.target.value))}
-                            className="h-9 w-14 border-x border-input bg-background text-center text-sm outline-none"
-                          />
-                          <button
-                            type="button"
-                            aria-label="Aumentar"
-                            onClick={() => setQtd(r.id, qtd + 1)}
-                            className="grid size-9 place-items-center text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                          >
-                            <Plus className="size-4" />
-                          </button>
-                        </div>
+                        <QtyStepper
+                          value={qtd}
+                          onChange={(v) => setQtd(r.id, v)}
+                        />
                         <button
                           type="button"
                           onClick={() => adicionar(r.id, qtd)}
@@ -211,12 +198,15 @@ export function VendaTab({
                   >
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium">{l.receita.nome}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatQty(l.quantidade)} × {formatMoney(l.unit)}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{formatMoney(l.unit)} / un.</p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-success">
+                      <QtyStepper
+                        value={l.quantidade}
+                        min={1}
+                        onChange={(v) => setCartQtd(l.receita.id, v)}
+                      />
+                      <span className="w-20 text-right text-sm font-semibold text-success">
                         {formatMoney(l.total)}
                       </span>
                       <button
@@ -277,6 +267,28 @@ export function VendaTab({
                 </div>
               </div>
 
+              {/* Comissão do funcionário */}
+              <div className="mt-3 rounded-lg border border-border bg-background/40 p-3">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">
+                  Comissão do funcionário (%)
+                </p>
+                <div className="flex gap-2">
+                  <div className="flex overflow-hidden rounded-lg border border-input text-xs">
+                    <span className="grid place-items-center bg-blue/15 px-3 py-2 font-medium text-blue">
+                      %
+                    </span>
+                  </div>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={comissaoPct || ''}
+                    onChange={(e) => setComissaoPct(Math.max(0, Number(e.target.value)))}
+                    placeholder="Opcional"
+                    className="h-9"
+                  />
+                </div>
+              </div>
+
               {/* Resumo Financeiro */}
               <dl className="mt-4 flex flex-col gap-1.5 text-sm">
                 <ResumoLinha label="Valor Total" valor={formatMoney(resumo.valorTotal)} />
@@ -296,11 +308,13 @@ export function VendaTab({
                   valor={formatMoney(resumo.custoTotal)}
                   tone="muted"
                 />
-                <ResumoLinha
-                  label="Comissão (40%)"
-                  valor={`- ${formatMoney(resumo.comissao)}`}
-                  tone="muted"
-                />
+                {resumo.comissao > 0 && (
+                  <ResumoLinha
+                    label={`Comissão (${formatQty(resumo.comissaoPct)}%)`}
+                    valor={`- ${formatMoney(resumo.comissao)}`}
+                    tone="muted"
+                  />
+                )}
                 <ResumoLinha
                   label="Lucro Líquido"
                   valor={formatMoney(resumo.lucroLiquido)}
@@ -348,6 +362,45 @@ export function VendaTab({
           </Card>
         )}
       </div>
+    </div>
+  )
+}
+
+function QtyStepper({
+  value,
+  onChange,
+  min = 0,
+}: {
+  value: number
+  onChange: (v: number) => void
+  min?: number
+}) {
+  return (
+    <div className="flex items-center overflow-hidden rounded-lg border border-input">
+      <button
+        type="button"
+        aria-label="Diminuir"
+        onClick={() => onChange(value - 1)}
+        className="grid size-9 place-items-center text-muted-foreground transition hover:bg-muted hover:text-foreground"
+      >
+        <Minus className="size-4" />
+      </button>
+      <input
+        type="number"
+        min={min}
+        step={1}
+        value={value}
+        onChange={(e) => onChange(Math.trunc(Number(e.target.value)))}
+        className="h-9 w-14 border-x border-input bg-background text-center text-sm outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+      />
+      <button
+        type="button"
+        aria-label="Aumentar"
+        onClick={() => onChange(value + 1)}
+        className="grid size-9 place-items-center text-muted-foreground transition hover:bg-muted hover:text-foreground"
+      >
+        <Plus className="size-4" />
+      </button>
     </div>
   )
 }

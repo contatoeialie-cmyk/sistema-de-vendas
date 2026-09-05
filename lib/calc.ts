@@ -1,7 +1,5 @@
 import type { CartItem, Insumo, Receita } from './types'
 
-export const COMISSAO_PCT = 0.4
-
 export function formatMoney(v: number) {
   return `$ ${(Number.isFinite(v) ? v : 0).toLocaleString('en-US', {
     minimumFractionDigits: 2,
@@ -62,6 +60,7 @@ export interface CartResumo {
   desconto: number
   valorFinal: number
   custoTotal: number
+  comissaoPct: number
   comissao: number
   lucroLiquido: number
   ingredientes: IngredienteNecessario[]
@@ -73,6 +72,7 @@ export function calcularCarrinho(
   insumos: Insumo[],
   descontoTipo: 'valor' | 'porcentagem',
   descontoValor: number,
+  comissaoPct = 0,
 ): CartResumo {
   const linhas = cart
     .map((item) => {
@@ -104,7 +104,8 @@ export function calcularCarrinho(
     0,
   )
 
-  const comissao = valorFinal * COMISSAO_PCT
+  const pct = Math.max(0, comissaoPct)
+  const comissao = valorFinal * (pct / 100)
   const lucroLiquido = valorFinal - custoTotal - comissao
 
   // Ingredientes agregados
@@ -128,6 +129,7 @@ export function calcularCarrinho(
     desconto,
     valorFinal,
     custoTotal,
+    comissaoPct: pct,
     comissao,
     lucroLiquido,
     ingredientes: Array.from(mapa.values()).sort((a, b) => a.nome.localeCompare(b.nome)),

@@ -37,6 +37,7 @@ interface StoreValue {
   insumos: Insumo[]
   receitas: Receita[]
   addCategoria: (nome: string) => Categoria
+  updateCategoria: (id: string, nome: string) => void
   removeCategoria: (id: string) => void
   addInsumo: (data: Omit<Insumo, 'id'>) => void
   updateInsumo: (id: string, data: Omit<Insumo, 'id'>) => void
@@ -77,6 +78,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return cat
   }, [])
 
+  const updateCategoria = useCallback((id: string, nome: string) => {
+    setCategorias((prev) => prev.map((c) => (c.id === id ? { ...c, nome: nome.trim() } : c)))
+  }, [])
+
   const removeCategoria = useCallback((id: string) => {
     setCategorias((prev) => prev.filter((c) => c.id !== id))
   }, [])
@@ -108,6 +113,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       insumos,
       receitas,
       addCategoria,
+      updateCategoria,
       removeCategoria,
       addInsumo,
       updateInsumo,
@@ -122,6 +128,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       insumos,
       receitas,
       addCategoria,
+      updateCategoria,
       removeCategoria,
       addInsumo,
       updateInsumo,

@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
 import type { CartResumo } from './calc'
-import { COMISSAO_PCT, formatMoney, formatQty } from './calc'
+import { formatMoney, formatQty } from './calc'
 
 const PINK: [number, number, number] = [236, 72, 153]
 const BLUE: [number, number, number] = [56, 189, 248]
@@ -109,7 +109,15 @@ export async function gerarRelatorioPDF(resumo: CartResumo) {
     ['Desconto', `- ${formatMoney(resumo.desconto)}`, false],
     ['Valor Final', formatMoney(resumo.valorFinal), true],
     ['Custo Total', formatMoney(resumo.custoTotal), false],
-    [`Comissão (${Math.round(COMISSAO_PCT * 100)}%)`, `- ${formatMoney(resumo.comissao)}`, false],
+    ...(resumo.comissaoPct > 0
+      ? ([
+          [
+            `Comissão (${formatQty(resumo.comissaoPct)}%)`,
+            `- ${formatMoney(resumo.comissao)}`,
+            false,
+          ],
+        ] as [string, string, boolean][])
+      : []),
     ['Lucro Líquido', formatMoney(resumo.lucroLiquido), true],
   ]
   autoTable(doc, {
